@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
+    "postinstall": "prisma generate --schema=../../packages/database/prisma/schema.prisma",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
