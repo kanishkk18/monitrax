@@ -1,0 +1,256 @@
+// packages/database/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Better Auth Required Models ────────────────────────────────────────────
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions      Session[]
+  accounts      Account[]
+  monitorJobs   MonitorJob[]
+  notifications Notification[]
+  settings      UserSettings?
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verification")
+}
+
+// ─── App Models ──────────────────────────────────────────────────────────────
+
+model UserSettings {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Notification preferences
+  emailNotifications Boolean @default(true)
+  inAppNotifications Boolean @default(true)
+
+  // Email provider: "resend" | "smtp" | "both"
+  emailProvider String @default("resend")
+
+  // Resend
+  resendApiKey String?
+
+  // SMTP
+  smtpHost     String?
+  smtpPort     Int?
+  smtpUser     String?
+  smtpPassword String?
+  smtpSecure   Boolean @default(true)
+
+  emailFrom String @default("alerts@changd.app")
+
+  // Storage: "uploadthing" | "s3"
+  storageProvider String @default("uploadthing")
+
+  // S3
+  s3Bucket    String?
+  s3Region    String?
+  s3AccessKey String?
+  s3SecretKey String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_settings")
+}
+
+model MonitorJob {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Basic info
+  name        String
+  url         String
+  description String?
+  enabled     Boolean @default(true)
+
+  // Monitor type: "visual" | "text" | "xpath" | "json_api"
+  monitorType String @default("visual")
+
+  // Screenshot options (visual mode only)
+  captureScreenshot Boolean @default(true)         // if false: text-only, no image
+  imageFormat       String  @default("webp")        // "webp" | "avif" | "png"
+
+  // XPath selector (for xpath type)
+  xpathSelector String?
+
+  // JSON path (for json_api type)
+  jsonPath String?
+
+  // HTTP headers (JSON string) for API monitoring
+  httpHeaders String?
+
+  // Screenshot viewport
+  viewportWidth  Int     @default(1920)
+  viewportHeight Int     @default(1080)
+  fullPage       Boolean @default(true)
+
+  // Diff threshold: 0.0 - 100.0 (% of pixels changed to trigger alert)
+  threshold Float @default(0.5)
+
+  // Ignore dynamic regions: JSON [{x, y, width, height}]
+  ignoreRegions String?
+
+  // Cron schedule
+  cronExpression String @default("0 9 * * *")
+
+  // Additional notification emails
+  notifyEmails String[] @default([])
+
+  // Status
+  lastRunAt    DateTime?
+  nextRunAt    DateTime?
+  lastStatus   String? // "success" | "changed" | "no_change" | "error"
+  failureCount Int     @default(0)
+  totalRuns    Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  screenshots Screenshot[]
+  logs        JobLog[]
+
+  @@index([userId])
+  @@index([enabled, nextRunAt])
+  @@map("monitor_job")
+}
+
+model Screenshot {
+  id    String     @id @default(cuid())
+  jobId String
+  job   MonitorJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  // Storage
+  imageUrl   String
+  storageKey String
+
+  // Diff vs previous
+  previousId String?     @unique
+  previous   Screenshot? @relation("ScreenshotChain", fields: [previousId], references: [id])
+  next       Screenshot? @relation("ScreenshotChain")
+
+  // Comparison results
+  diffUrl        String?
+  diffStorageKey String?
+  diffPercentage Float?
+  diffPixels     Int?
+  hasChanged     Boolean @default(false)
+
+  // For XPath / JSON API monitoring
+  extractedContent String?
+
+  // Text-based monitoring
+  textContent String? // full page text snapshot
+  textDiff    String? // unified diff (before/after lines)
+  textChanged Boolean @default(false)
+
+  // Metadata
+  capturedAt      DateTime @default(now())
+  captureDuration Int // ms
+  viewportWidth   Int
+  viewportHeight  Int
+  pageTitle       String?
+  error           String? // Error message if capture failed
+
+  @@index([jobId, capturedAt])
+  @@map("screenshot")
+}
+
+model JobLog {
+  id    String     @id @default(cuid())
+  jobId String
+  job   MonitorJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  // "info" | "warn" | "error"
+  level    String
+  message  String
+  metadata String? // JSON
+
+  createdAt DateTime @default(now())
+
+  @@index([jobId, createdAt])
+  @@map("job_log")
+}
+
+model Notification {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // "change_detected" | "job_failed" | "job_recovered" | "system"
+  type    String
+  title   String
+  message String
+  read    Boolean @default(false)
+
+  jobId        String?
+  screenshotId String?
+  actionUrl    String?
+  actionText   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, read, createdAt])
+  @@map("notification")
+}
