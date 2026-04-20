@@ -42,11 +42,8 @@ export async function captureScreenshot(
 
   // Dynamic import — Playwright never touched by Next.js module graph
  const { chromium } = await import("playwright");
-const browser = process.env.BROWSERLESS_TOKEN
-  ? await chromium.connect(
-      `wss://chrome.browserless.io?token=${process.env.BROWSERLESS_TOKEN}`
-    )
-  : await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true });
+
   try {
     const context = await browser.newContext({
       viewport: { width: viewportWidth, height: viewportHeight },
