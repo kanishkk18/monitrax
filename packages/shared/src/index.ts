@@ -114,21 +114,21 @@ export interface CronPreset {
 }
 
 export const CRON_PRESETS: CronPreset[] = [
-  {
-    label: "Every 15 minutes",
-    value: "*/15 * * * *",
-    description: "Runs every 15 minutes",
-  },
-  {
-    label: "Every 30 minutes",
-    value: "*/30 * * * *",
-    description: "Runs every 30 minutes",
-  },
-  {
-    label: "Every hour",
-    value: "0 * * * *",
-    description: "Runs at the start of every hour",
-  },
+  // {
+  //   label: "Every 15 minutes",
+  //   value: "*/15 * * * *",
+  //   description: "Runs every 15 minutes",
+  // },
+  // {
+  //   label: "Every 30 minutes",
+  //   value: "*/30 * * * *",
+  //   description: "Runs every 30 minutes",
+  // },
+  // {
+  //   label: "Every hour",
+  //   value: "0 * * * *",
+  //   description: "Runs at the start of every hour",
+  // },
   {
     label: "Every 6 hours",
     value: "0 */6 * * *",
@@ -138,6 +138,16 @@ export const CRON_PRESETS: CronPreset[] = [
     label: "Every 12 hours",
     value: "0 */12 * * *",
     description: "Runs every 12 hours",
+  }, 
+  {
+    label: "Every 18 hours",
+    value: "0 */18 * * *",
+    description: "Runs every 18 hours",
+  },
+  {
+    label: "Every 24 hours",
+    value: "0 */24 * * *",
+    description: "Runs every 24 hours",
   },
   {
     label: "Daily at 9 AM",
