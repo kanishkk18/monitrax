@@ -135,7 +135,7 @@ export function SchedulePicker({ value, onChange }: SchedulePickerProps) {
       </div>
 
       {/* Custom Toggle */}
-      <div className="flex items-center gap-3">
+      {/* <div className="flex items-center gap-3">
         <Button
           type="button"
           variant={isCustom ? "default" : "outline"}
@@ -151,7 +151,7 @@ export function SchedulePicker({ value, onChange }: SchedulePickerProps) {
             {activePreset.description}
           </span>
         )}
-      </div>
+      </div> */}
 
       {/* Custom Input */}
       {isCustom && (
